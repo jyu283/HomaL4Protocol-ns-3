@@ -177,6 +177,7 @@ main (int argc, char *argv[])
   uint32_t initialCredit = 7; // in packets
   uint64_t inboundRtxTimeout = 1000; // in microseconds
   uint64_t outboundRtxTimeout = 10000; // in microseconds
+  std::string msgSizeDistFileName ("inputs/homa-paper-reproduction/DCTCP-MsgSizeDist.txt");
     
   CommandLine cmd (__FILE__);
   cmd.AddValue ("duration", "The duration of the simulation in seconds.", duration);
@@ -188,6 +189,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("bdpPkts", "RttBytes to use in the simulation.", initialCredit);
   cmd.AddValue ("inboundRtxTimeout", "Number of microseconds before an inbound msg expires.", inboundRtxTimeout);
   cmd.AddValue ("outboundRtxTimeout", "Number of microseconds before an outbound msg expires.", outboundRtxTimeout);
+  cmd.AddValue ("msgSizeCDF", "The path to the message size CDF file", msgSizeDistFileName);
   cmd.Parse (argc, argv);
     
   if (debugMode)
@@ -205,7 +207,6 @@ main (int argc, char *argv[])
   LogComponentEnable ("HomaSocket", LOG_LEVEL_WARN);
   LogComponentEnable ("HomaL4Protocol", LOG_LEVEL_WARN);
     
-  std::string msgSizeDistFileName ("inputs/homa-paper-reproduction/DCTCP-MsgSizeDist.txt");
   std::string tracesFileName ("outputs/homa-paper-reproduction/MsgTraces");
   tracesFileName += "_W5";
   tracesFileName += "_load-" + std::to_string((int)(networkLoad*100)) + "p";
@@ -348,7 +349,7 @@ main (int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
     
   /******** Read the Workload Distribution From File ********/
-  NS_LOG_UNCOND("Reading Msg Size Distribution...");
+  NS_LOG_UNCOND("Reading Msg Size Distribution from " << msgSizeDistFileName << "...");
   double avgMsgSizePkts;
   std::map<double,int> msgSizeCDF = ReadMsgSizeDist(msgSizeDistFileName, avgMsgSizePkts);
     
@@ -388,22 +389,19 @@ main (int argc, char *argv[])
   Config::ConnectWithoutContext("/NodeList/*/$ns3::HomaL4Protocol/MsgFinish", 
                                 MakeBoundCallback(&TraceMsgFinish, msgStream));
   
-  if (debugMode)
-  {
-    Ptr<OutputStreamWrapper> pktStream;
-    std::string pktTraceFileName ("outputs/homa-paper-reproduction/debug-pktTrace.tr"); 
-    pktStream = asciiTraceHelper.CreateFileStream (pktTraceFileName);
-      
-    Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/DataPktDeparture", 
-                                MakeBoundCallback(&TraceDataPktDeparture,pktStream));
-    Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/DataPktArrival", 
-                                MakeBoundCallback(&TraceDataPktArrival,pktStream));
-    Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/CtrlPktArrival", 
-                                MakeBoundCallback(&TraceCtrlPktArrival,pktStream));
+  // Ptr<OutputStreamWrapper> pktStream;
+  // std::string pktTraceFileName ("outputs/homa-paper-reproduction/pktTrace.tr"); 
+  // pktStream = asciiTraceHelper.CreateFileStream (pktTraceFileName);
+    
+  // Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/DataPktDeparture", 
+  //                             MakeBoundCallback(&TraceDataPktDeparture,pktStream));
+  // Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/DataPktArrival", 
+  //                             MakeBoundCallback(&TraceDataPktArrival,pktStream));
+  // Config::ConnectWithoutContext("/NodeList/45/$ns3::HomaL4Protocol/CtrlPktArrival", 
+  //                             MakeBoundCallback(&TraceCtrlPktArrival,pktStream));
   
 //     std::string pcapFileName ("outputs/homa-paper-reproduction/pcaps/tor-spine");
 //     aggregationLinks.EnablePcapAll (pcapFileName, false);
-  }
 
   /******** Run the Actual Simulation ********/
   NS_LOG_UNCOND("Running the Simulation...");

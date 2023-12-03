@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
     lines = raw_data.readlines()
     workload_cdfs = defaultdict(lambda: [])
+    workload_avgs = defaultdict(float)
 
     prev_line = (None, 0, 0.0)
     for i, line in enumerate(lines):
@@ -28,6 +29,8 @@ if __name__ == "__main__":
         msg_sz = int(cells[3])
         msg_freq = float(cells[4])
 
+        workload_avgs[workload] += msg_sz * (msg_freq / 100)
+
         if (workload, msg_sz, msg_freq) == prev_line:
             continue
         
@@ -38,10 +41,12 @@ if __name__ == "__main__":
     
     for workload, cdfs in workload_cdfs.items():
         with open(f"{workload}_MsgSizeDist.txt", "w+") as fp:
-            cdfs[-1] = (cdfs[-1][0], 100.0)
-            print(workload)
+            cdfs[-1] = (cdfs[-1][0], 100.0)  # make sure the CDF ends on 100%
+            avg_sz = round(workload_avgs[workload])  # average message bytes
+            print(f"{workload} ({avg_sz=})")
+            fp.write(str(avg_sz) + "\n")
             for sz, freq in cdfs:
                 freq = round(freq / 100, 6)
-                fp.write(f"{sz}      {freq}")
+                fp.write(f"{sz}      {freq}\n")
                 print(f"{sz}\t{freq}")
     
