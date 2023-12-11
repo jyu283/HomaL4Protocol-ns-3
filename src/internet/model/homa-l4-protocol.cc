@@ -202,13 +202,11 @@ HomaL4Protocol::GetNumUnschedPrioBands (void) const
 {
   return m_numUnschedPrioBands;
 }
-
-// WTF: GetOvercommitLevel
-// hardcoding this seems to make no difference
+    
 uint8_t
 HomaL4Protocol::GetOvercommitLevel (void) const
 {
-  return 1;
+  return m_overcommitLevel;
 }
     
 bool HomaL4Protocol::MemIsOptimized (void)
@@ -653,7 +651,7 @@ HomaOutboundMsg::HomaOutboundMsg (Ptr<Packet> message,
     numPkts++;
   } 
   NS_ASSERT(numPkts == m_msgSizeBytes / m_maxPayloadSize + (m_msgSizeBytes % m_maxPayloadSize != 0));
-  // WTF: is a packet offset in this context?
+  
   m_maxGrantedIdx = std::min((uint16_t)(m_homa->GetBdp () -1), numPkts);
           
   // FIX: There is no timeout mechanism on the sender side for Homa 
@@ -1041,10 +1039,6 @@ bool HomaSendScheduler::GetNextMsgId (uint16_t &txMsgId)
           minRemainingBytes = curRemainingBytes;
           msgSelected = true;
         }
-        else
-        {
-          // WTF: YOU FUCKED CAUSE NO GRANT
-        }
       }
     }
     else // Expired messages should be removed from the state
@@ -1373,8 +1367,7 @@ Ptr<Ipv4Interface> HomaInboundMsg::GetIpv4Interface ()
  */
 void HomaInboundMsg::SetRtxEvent (EventId rtxEvent)
 {
-  m_rtxEvent
-   = rtxEvent;
+  m_rtxEvent = rtxEvent;
 }
 EventId HomaInboundMsg::GetRtxEvent ()
 {
@@ -1630,7 +1623,7 @@ void HomaRecvScheduler::ReceivePacket (Ptr<Packet> packet,
   {
     this->ReceiveDataPacket (packet, ipv4Header, homaHeader, interface);
     // Sender is not busy since it is able to send data packets
-    m_busySenders.erase(ipv4Header.GetSource().Get ());  // WTF: Busy senders?
+    m_busySenders.erase(ipv4Header.GetSource().Get ());
   }
   else if (rxFlag & HomaHeader::Flags_t::BUSY)
   {
@@ -1797,7 +1790,7 @@ void HomaRecvScheduler::SendAppropriateGrants()
     
   std::unordered_set<uint32_t> grantedSenders; // Same sender can't be granted for multiple msgs at once
   uint8_t grantingPrio = m_homa->GetNumUnschedPrioBands (); // Scheduled priorities start here
-  uint8_t overcommitDue = m_homa->GetOvercommitLevel (); // WTF: GetOverCommitLevel used
+  uint8_t overcommitDue = m_homa->GetOvercommitLevel ();
     
   Ptr<HomaInboundMsg> currentMsg;
   for (std::size_t i = 0; i < m_inboundMsgs.size(); ++i) 
@@ -1807,15 +1800,13 @@ void HomaRecvScheduler::SendAppropriateGrants()
 
     if (overcommitDue > 0)
     {  
-      // cap granting priority at highest band (makes sense)
       grantingPrio = std::min(grantingPrio, (uint8_t)(m_homa->GetNumTotalPrioBands()-1));
+      
       
       Ipv4Address senderAddress = currentMsg->GetSrcAddress ();
       if (!currentMsg->IsFullyGranted () &&
-          // is the current sender NOT in the set of granted senders? (i.e. is it NOT already granted)
           grantedSenders.find(senderAddress.Get ()) == grantedSenders.end())
       {
-        // is the current sender NOT in the set of busy senders? (i.e. is it NOT busy)
         if (m_busySenders.find(senderAddress.Get ()) == m_busySenders.end())
         {
           if (currentMsg->IsGrantable ())
@@ -1831,7 +1822,7 @@ void HomaRecvScheduler::SendAppropriateGrants()
           
         }
         overcommitDue--;
-        grantingPrio++; // WTF: why does this increment
+        grantingPrio++;
       }
     }
   }

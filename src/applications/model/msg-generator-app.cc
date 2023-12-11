@@ -213,33 +213,29 @@ uint32_t MsgGeneratorApp::GetNextMsgSizeFromDist ()
 {
   NS_LOG_FUNCTION(this);
     
-  int msgSizeBytes = 0;
+  int msgSizePkts = -1;
   double rndValue = m_msgSizePkts->GetValue();
   for (auto it = m_msgSizeCDF.begin(); it != m_msgSizeCDF.end(); it++)
   {
     if (rndValue <= it->first)
     {
-      msgSizeBytes = it->second;
+      msgSizePkts = it->second;
       break;
     }
   }
     
-  NS_ASSERT(msgSizeBytes > 0);
-
-  int packetSize;
-  if (m_maxPayloadSize > 0) {
-    packetSize = m_maxPayloadSize;
-  } else {
-    packetSize = GetNode()->GetDevice(0)->GetMtu();
-  }
-  
+  NS_ASSERT(msgSizePkts >= 0);
   // Homa header can't handle msgs larger than 0xffff pkts
-  int msgSizePackets = msgSizeBytes / packetSize;
-  if (msgSizePackets > 0xffff) {
-    return packetSize * 0xffff;
-  }
-
-  return msgSizeBytes;
+  msgSizePkts = std::min(0xffff, msgSizePkts);
+    
+  if (m_maxPayloadSize > 0)
+    return m_maxPayloadSize * (uint32_t)msgSizePkts;
+  else
+    return GetNode ()->GetDevice (0)->GetMtu () * (uint32_t)msgSizePkts;
+    
+  // NOTE: If maxPayloadSize is not set, the generated messages will be
+  //       slightly larger than the intended number of packets due to
+  //       the addition of the protocol headers.
 }
     
 void MsgGeneratorApp::SendMessage ()
