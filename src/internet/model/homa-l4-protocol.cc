@@ -1319,6 +1319,11 @@ HomaInboundMsg::~HomaInboundMsg ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
+
+bool HomaInboundMsg::CompareResponsiveness(Ptr<HomaInboundMsg> m1, Ptr<HomaInboundMsg> m2)
+{
+  return m1->m_grantRespTime < m2->m_grantRespTime;
+}
     
 uint32_t HomaInboundMsg::GetRemainingBytes()
 {
@@ -1455,6 +1460,7 @@ void HomaInboundMsg::ReceiveDataPacket (Ptr<Packet> p, uint16_t pktOffset)
      * to the sender of this message or not.
      */
     m_maxGrantableIdx++;
+    m_grantRespTime = Simulator::Now().GetNanoSeconds() - m_lastGrantTime;
   }
   else
   {
@@ -1537,6 +1543,7 @@ Ptr<Packet> HomaInboundMsg::GenerateGrantOrAck(uint8_t grantedPrio,
   p->ReplacePacketTag (ipTosTag);
     
   m_maxGrantedIdx = m_maxGrantableIdx;
+  m_lastGrantTime = Simulator::Now().GetNanoSeconds();
     
   return p;
 }
@@ -1610,6 +1617,14 @@ HomaRecvScheduler::~HomaRecvScheduler ()
                  numIncmpltMsg << " active inbound messages!");
   }
 }
+
+void HomaRecvScheduler::RankSenderResponsiveness()
+{
+  if (m_inboundMsgs.size() > 1) {
+    NS_LOG_WARN(this << " total inbound msgs: " << m_inboundMsgs.size());
+  }
+  std::sort(m_inboundMsgs.begin(), m_inboundMsgs.end(), HomaInboundMsg::CompareResponsiveness);
+}
     
 void HomaRecvScheduler::ReceivePacket (Ptr<Packet> packet, 
                                        Ipv4Header const &ipv4Header,
@@ -1630,7 +1645,7 @@ void HomaRecvScheduler::ReceivePacket (Ptr<Packet> packet,
     m_busySenders.insert(ipv4Header.GetSource().Get ());
     // TODO: Is there anything else to do with a BUSY packet?
   }
-    
+  this->RankSenderResponsiveness();
   this->SendAppropriateGrants();
 }
     

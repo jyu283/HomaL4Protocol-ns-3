@@ -599,6 +599,8 @@ public:
   HomaInboundMsg (Ptr<Packet> p, Ipv4Header const &ipv4Header, HomaHeader const &homaHeader, 
                   Ptr<Ipv4Interface> iface, uint32_t mtuBytes, uint16_t rttPackets, bool memIsOptimized);
   ~HomaInboundMsg (void);
+
+  static bool CompareResponsiveness(Ptr<HomaInboundMsg> m1, Ptr<HomaInboundMsg> m2);
   
   /**
    * \brief Get the remaining undelivered bytes of this message.
@@ -760,6 +762,8 @@ private:
   uint16_t m_msgSizePkts;    //!< Number packets this message occupies
   uint16_t m_maxGrantableIdx;//!< Highest Grant Offset determined so far (default: m_rttPackets)
   uint16_t m_maxGrantedIdx;  //!< Highest Grant Offset sent so far
+  uint64_t m_lastGrantTime;  //!< Time of last grant given
+  uint64_t m_grantRespTime;  //!< Time it took to respond to the grant
   uint8_t m_prio;            //!< The most recent granted priority set for this message
   bool m_currentlyScheduled; //!< Whether this message is prioritized enough to be actively granted
   
@@ -862,6 +866,8 @@ public:
   
 private:
   Ptr<HomaL4Protocol> m_homa; //!< the protocol instance itself that sends/receives messages
+
+  void RankSenderResponsiveness();
   
   std::vector<Ptr<HomaInboundMsg>> m_inboundMsgs; //!< Sorted vector of inbound messages that are to be scheduled
   std::unordered_set<uint32_t>  m_busySenders; //!< Set of senders from whom the last received pkt type is BUSY
