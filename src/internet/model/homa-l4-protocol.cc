@@ -1603,6 +1603,7 @@ HomaRecvScheduler::HomaRecvScheduler (Ptr<HomaL4Protocol> homaL4Protocol)
   NS_LOG_FUNCTION (this);
       
   m_homa = homaL4Protocol;
+  m_grantCounter = 0;
 }
 
 HomaRecvScheduler::~HomaRecvScheduler ()
@@ -1645,7 +1646,10 @@ void HomaRecvScheduler::ReceivePacket (Ptr<Packet> packet,
     m_busySenders.insert(ipv4Header.GetSource().Get ());
     // TODO: Is there anything else to do with a BUSY packet?
   }
-  this->RankSenderResponsiveness();
+  if (this->m_grantCounter++ > 100) {
+    this->RankSenderResponsiveness();
+    this->m_grantCounter = 0;
+  }
   this->SendAppropriateGrants();
 }
     

@@ -118,20 +118,20 @@ void MsgGeneratorApp::Install (Ptr<Node> node,
     
 void MsgGeneratorApp::SetWorkload (double load, 
                                    std::map<double,int> msgSizeCDF, 
-                                   double avgMsgSizePkts)
+                                   double avgMsgSizeBytes)
 {
-  NS_LOG_FUNCTION(this << avgMsgSizePkts);
+  NS_LOG_FUNCTION(this << avgMsgSizeBytes);
     
-  load = std::max(0.0, std::min(load, 1.0));
+  /* Remove cap at 1.0 to push to extremes. */
+  // load = std::max(0.0, std::min(load, 1.0));
+  load = std::max(0.0, load);
     
   Ptr<NetDevice> netDevice = GetNode ()->GetDevice (0); 
-  uint32_t mtu = netDevice->GetMtu ();
     
   PointToPointNetDevice* p2pNetDevice = dynamic_cast<PointToPointNetDevice*>(&(*(netDevice))); 
   uint64_t txRate = p2pNetDevice->GetDataRate ().GetBitRate ();
     
-  double avgPktLoadBytes = (double)(mtu + 64); // Account for the ctrl pkts each data pkt induce
-  double avgInterMsgTime = (avgMsgSizePkts * avgPktLoadBytes * 8.0 ) / (((double)txRate) * load);
+  double avgInterMsgTime = (avgMsgSizeBytes * 8.0 ) / (((double)txRate) * load);
     
   m_interMsgTime = CreateObject<ExponentialRandomVariable> ();
   m_interMsgTime->SetAttribute ("Mean", DoubleValue (avgInterMsgTime));
@@ -212,30 +212,34 @@ void MsgGeneratorApp::ScheduleNextMessage ()
 uint32_t MsgGeneratorApp::GetNextMsgSizeFromDist ()
 {
   NS_LOG_FUNCTION(this);
-    
-  int msgSizePkts = -1;
+
+  int msgSizeBytes = 0;
   double rndValue = m_msgSizePkts->GetValue();
   for (auto it = m_msgSizeCDF.begin(); it != m_msgSizeCDF.end(); it++)
   {
     if (rndValue <= it->first)
     {
-      msgSizePkts = it->second;
+      msgSizeBytes = it->second;
       break;
     }
   }
-    
-  NS_ASSERT(msgSizePkts >= 0);
+
+  NS_ASSERT(msgSizeBytes > 0);
+
+  int packetSize;
+  if (m_maxPayloadSize > 0) {
+    packetSize = m_maxPayloadSize;
+  } else {
+    packetSize = GetNode()->GetDevice(0)->GetMtu();
+  }
+
   // Homa header can't handle msgs larger than 0xffff pkts
-  msgSizePkts = std::min(0xffff, msgSizePkts);
-    
-  if (m_maxPayloadSize > 0)
-    return m_maxPayloadSize * (uint32_t)msgSizePkts;
-  else
-    return GetNode ()->GetDevice (0)->GetMtu () * (uint32_t)msgSizePkts;
-    
-  // NOTE: If maxPayloadSize is not set, the generated messages will be
-  //       slightly larger than the intended number of packets due to
-  //       the addition of the protocol headers.
+  int msgSizePackets = msgSizeBytes / packetSize;
+  if (msgSizePackets > 0xffff) {
+    return packetSize * 0xffff;
+  }
+
+  return msgSizeBytes;
 }
     
 void MsgGeneratorApp::SendMessage ()

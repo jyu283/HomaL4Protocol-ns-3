@@ -871,6 +871,7 @@ private:
   
   std::vector<Ptr<HomaInboundMsg>> m_inboundMsgs; //!< Sorted vector of inbound messages that are to be scheduled
   std::unordered_set<uint32_t>  m_busySenders; //!< Set of senders from whom the last received pkt type is BUSY
+  uint64_t m_grantCounter;
 };
     
 } // namespace ns3
