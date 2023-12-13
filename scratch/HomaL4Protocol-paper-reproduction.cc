@@ -178,6 +178,7 @@ main (int argc, char *argv[])
   uint64_t inboundRtxTimeout = 1000; // in microseconds
   uint64_t outboundRtxTimeout = 10000; // in microseconds
   std::string msgSizeDistFileName ("inputs/homa-paper-reproduction/DCTCP-MsgSizeDist.txt");
+  std::string tag ("default");
     
   CommandLine cmd (__FILE__);
   cmd.AddValue ("duration", "The duration of the simulation in seconds.", duration);
@@ -190,6 +191,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("inboundRtxTimeout", "Number of microseconds before an inbound msg expires.", inboundRtxTimeout);
   cmd.AddValue ("outboundRtxTimeout", "Number of microseconds before an outbound msg expires.", outboundRtxTimeout);
   cmd.AddValue ("msgSizeCDF", "The path to the message size CDF file", msgSizeDistFileName);
+  cmd.AddValue ("tag", "A tag to the filename", tag);
   cmd.Parse (argc, argv);
     
   if (debugMode)
@@ -214,6 +216,8 @@ main (int argc, char *argv[])
     tracesFileName += "_debug";
   else
     tracesFileName += "_" + std::to_string(simIdx);
+  
+  tracesFileName += "_" + tag;
     
   std::string qStreamName = tracesFileName + ".qlen";
   std::string msgTracesFileName = tracesFileName + ".tr";
