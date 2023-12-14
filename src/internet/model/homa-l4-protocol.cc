@@ -206,7 +206,8 @@ HomaL4Protocol::GetNumUnschedPrioBands (void) const
 uint8_t
 HomaL4Protocol::GetOvercommitLevel (void) const
 {
-  return m_overcommitLevel;
+  // WTF: overcommitment level changes here
+  return 32;
 }
     
 bool HomaL4Protocol::MemIsOptimized (void)
